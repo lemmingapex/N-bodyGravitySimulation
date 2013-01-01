@@ -1,15 +1,20 @@
+var settings = {
+    mass: 1000,
+    colour: { h:0, s:0, v:0.1 }
+};
+
 _mouseDown = false;
 _rightClick = false;
+_ctrlDown = false;
 _clickX = 0;
 _clickY = 0;
 _currentX = 0;
 _currentY = 0;
 
-_planets = new Array();
-_collisions = new Array();
+_planets = [];
+_collisions = [];
 
 _h = 1/75;
-_initMass = 1000;
 _initRadius = Math.log(Math.E + 1.0);
 
 function eventResize() {
@@ -32,8 +37,17 @@ function mouseDown(e) {
 }
 
 function mouseMove(e) {
-	_currentX=e.layerX-_initRadius;
-	_currentY=e.layerY-_initRadius;
+	var oldX = _currentX;
+	var oldY = _currentY;
+	_currentX = e.clientX - _can.offsetLeft;
+	_currentY = e.clientY - _can.offsetTop;
+
+	if(_ctrlDown && _mouseDown) {
+		for(var i = 0; i<_planets.length; i++) {
+			_planets[i].x = _planets[i].x + (_currentX-oldX);
+			_planets[i].y = _planets[i].y + (_currentY-oldY);
+		}
+	}
 }
 
 function mouseUp(e) {
@@ -57,6 +71,18 @@ function rightClick(e) {
 	return false;
 }
 
+function keydown(e) {
+	if(e.keyCode == 17) {
+		_ctrlDown = true;
+	}
+}
+
+function keyup(e) {
+	if(e.keyCode == 17) {
+		_ctrlDown = false;
+	}
+}
+
 function drawLine(x1, y1, x2, y2) {
 	_ctx.lineWidth = 2;
 	_ctx.beginPath();
@@ -68,7 +94,7 @@ function drawLine(x1, y1, x2, y2) {
 }
 
 function addPlanet(x, y, vx, vy) {
-	_planets.push(new planet(_initMass, x, y, vx, vy));
+	_planets.push(new Planet(settings.mass, x, y, vx, vy));
 }
 
 function init() {
@@ -86,6 +112,8 @@ function init() {
 	_can.onmousedown = mouseDown;
 	_can.onmouseup = mouseUp;
 	_can.oncontextmenu = rightClick;
+	_can.onkeydown = keydown;
+	_can.onkeyup = keyup;
 
 	_ctx = _can.getContext('2d');
 
@@ -103,9 +131,7 @@ function run() {
 	reDraw();
 	drawVelocityLine();
 	stats();
-	for(var i = 0; i<_planets.length; i++) {
-		updateAcceleration(_planets[i]);
-	}
+	integrate();
 	for(var i = 0; i<_planets.length; i++) {
 		updateVelocityAndPosition(_planets[i]);
 	}
@@ -115,39 +141,40 @@ function run() {
 }
 
 function reDraw() {
-	//_ctx.globalCompositeOperation = "source-over";
 	_ctx.fillStyle = "rgba(42, 42, 42, .5)";
 	_ctx.fillRect(0, 0, _can.width, _can.height);
 	for(var i = 0; i<_planets.length; i++) {
-		draw(_planets[i]);
+		_planets[i].draw(_ctx);
 	}
 }
 
-function updateAcceleration(p) {
-	var deltaAy = 0;
-	var deltaAx = 0;
-	var j = _planets.indexOf(p);
-	for(var i = 0; i<_planets.length; i++) {
-		var op = _planets[i];
-		if(i != j && !p.collided && !op.collided) {
-			var xdiff = (op.x-p.x);
-			var ydiff = (op.y-p.y);
-			var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
-			var d = Math.sqrt(dsquared);
-			if(d < op.r + p.r) {
-				op.collided = true;
-				p.collided = true;
-				var totalMass = op.m+p.m;
-				_collisions.push(new planet(totalMass, (op.x*op.m + p.x*p.m)/totalMass, (op.y*op.m + p.y*p.m)/totalMass, (op.vx*op.m + p.vx*p.m)/totalMass, (op.vy*op.m + p.vy*p.m)/totalMass));
-			} else {
-				var accel = op.m/dsquared;
-				deltaAx += (accel*xdiff)/d;
-				deltaAy += (accel*ydiff)/d;
+function integrate() {
+	for(var j = 0; j<_planets.length; j++) {
+		var p = _planets[j];
+		var deltaAy = 0;
+		var deltaAx = 0;
+		for(var i = 0; i<_planets.length; i++) {
+			var op = _planets[i];
+			if(i != j && !p.collided && !op.collided) {
+				var xdiff = (op.x-p.x);
+				var ydiff = (op.y-p.y);
+				var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
+				var d = Math.sqrt(dsquared);
+				if(d < op.r + p.r) {
+					op.collided = true;
+					p.collided = true;
+					var totalMass = op.m+p.m;
+					_collisions.push(new Planet(totalMass, (op.x*op.m + p.x*p.m)/totalMass, (op.y*op.m + p.y*p.m)/totalMass, (op.vx*op.m + p.vx*p.m)/totalMass, (op.vy*op.m + p.vy*p.m)/totalMass));
+				} else {
+					var accel = op.m/dsquared;
+					deltaAx += (accel*xdiff)/d;
+					deltaAy += (accel*ydiff)/d;
+				}
 			}
 		}
+		p.ax = deltaAx;
+		p.ay = deltaAy;
 	}
-	p.ax = deltaAx;
-	p.ay = deltaAy;
 }
 
 function updateVelocityAndPosition(p) {
@@ -166,17 +193,9 @@ function distanceSquared(p1, p2) {
 	return (xdiff*xdiff)+(ydiff*ydiff);
 }
 
-function draw(p) {
-	_ctx.beginPath();
-//	_ctx.globalCompositeOperation = "lighter";
-	_ctx.arc(p.x, p.y, p.r, 0, 2*Math.PI, 0);
-	_ctx.fillStyle = p.getColor();
-	_ctx.fill();
-}
-
-function planet(pm, px, py, pvx, pvy) {
+function Planet(pm, px, py, pvx, pvy) {
 	this.m = pm;
-	this.r = Math.log(Math.E + pm/_initMass);
+	this.r = Math.log(Math.E + pm/settings.mass);
 	this.getColor = function() {
 		return "rgb(187, 187, 153)";
 	}
@@ -188,6 +207,15 @@ function planet(pm, px, py, pvx, pvy) {
 	this.ay = 0;
 	this.collided = false;
 }
+
+Planet.prototype = {
+    draw: function( ctx ) {
+    	ctx.beginPath();
+		ctx.arc(this.x, this.y, this.r, 0, 2*Math.PI, 0);
+		ctx.fillStyle = this.getColor();
+		ctx.fill();
+    }
+};
 
 function system(ix, iy, ivx, ivy) {
 	var sign = (Math.random()>0.5)?1:-1;
@@ -202,9 +230,9 @@ function system(ix, iy, ivx, ivy) {
 		var vx = v*Math.cos(theta+(Math.PI*sign/2));
 		var vy = v*Math.sin(theta+(Math.PI*sign/2));
 
-		_planets.push(new planet(_initMass*Math.random()*10, ix+x, iy+y, vx+ivx, vy+ivy));
+		_planets.push(new Planet((settings.mass)*Math.random()*10, ix+x, iy+y, vx+ivx, vy+ivy));
 	}
-	_planets.push(new planet(_initMass*10000, ix, iy, ivx, ivy));
+	_planets.push(new Planet((settings.mass)*10000, ix, iy, ivx, ivy));
 }
 
 

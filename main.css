@@ -5,11 +5,9 @@ body
 
 div
 {
+	background-color:#2a2a2a;
 	color: #BBBB99;
-	position:absolute;
-	left:10px;
-	top:10px;
-	z-index:4;
+
 }
 
 canvas
@@ -21,11 +19,32 @@ canvas
 	height: 100%;
 }
 
-#massInput
-{
+.info {
+	font-family: sans-serif;
+	font-size: 14px;
+	font-weight: 300;
+	letter-spacing: -1px;
+	background-color:#2a2a2a;
+	color: #BBBB99;
 	position:absolute;
-	z-index:3;
-	left:10px;
-	top:40px;
+}
+
+.info h1 {
+	letter-spacing: -1px;
+	font-weight: 300;
+	font-size: 16px;
+	opacity: 0.95;
+}
+
+#stats {
+	z-index:5;
+	left: 10px;
+	top: 80px;
+}
+
+#blurb {
+	z-index:4;
+	left: 10px;
+	top: 10px;
 }
 
