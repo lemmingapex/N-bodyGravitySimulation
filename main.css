@@ -19,14 +19,19 @@ canvas
 	height: 100%;
 }
 
+#canbak {
+  pointer-events:none;
+}
+
 .info {
 	font-family: sans-serif;
 	font-size: 14px;
 	font-weight: 300;
 	letter-spacing: -1px;
-	background-color:#2a2a2a;
 	color: #BBBB99;
 	position:absolute;
+	pointer-events:none;
+	z-index:4;
 }
 
 .info h1 {
@@ -36,14 +41,7 @@ canvas
 	opacity: 0.95;
 }
 
-#stats {
-	z-index:5;
-	left: 10px;
-	top: 80px;
-}
-
 #blurb {
-	z-index:4;
 	left: 10px;
 	top: 10px;
 }
