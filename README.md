@@ -1,5 +1,5 @@
-Stupid HTML & JS Canvas Gravity Simulator
-=========================================
+Stupid HTML & JS Gravity Simulator
+==================================
 
 A stupid model of universal gravitation.
 
