@@ -1,5 +1,10 @@
-Stupid HTML Canvas Gravity Simulator
-====================================
+Stupid HTML & JS Canvas Gravity Simulator
+=========================================
 
-Testing different integration methods. Brute force, RK4?, quad trees?
+A stupid model of universal gravitation.
 
+Numerical Integration methods: Euler, Runge–Kutta 4, Verlet (todo).
+
+Currently calculating acceleration in O(n^2) time.  Would like to include a Barnes-Hut simulation in the furtue.
+
+Collision detection is present.

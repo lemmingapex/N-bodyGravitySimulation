@@ -9,6 +9,7 @@ var settings = {
     timeStep: 1/75,
     integration: _integrationValues[0],
     barnesHut: false,
+    collisions: true,
     clear: function() {
     	_doClear = true;
     }
@@ -118,6 +119,7 @@ function init() {
 	gui.add(settings, 'trailOpacity', 0.0, 1.0).step(.01);
 	gui.add(settings, 'timeStep', 1/250, 1/5);
 	gui.add(settings, 'integration', _integrationValues);
+	gui.add(settings, 'collisions');
 	//gui.add(settings, 'barnesHut');
 
 	// background
@@ -179,40 +181,42 @@ function run() {
 		takeStep(j);
 	}
 	// collisions
-	for(var j = 0; j<_planets.length; j++) {
-		var p = _planets[j];
-		for(var i = j+1; i<_planets.length; i++) {
-			var op = _planets[i];
-			if(!p.collided && !op.collided) {
-				var xdiff = (op.x-p.x);
-				var ydiff = (op.y-p.y);
-				var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
-				var d = Math.sqrt(dsquared);
-				if(d < op.r + p.r) {
-					op.collided = true;
-					p.collided = true;
-					var totalMass = op.m+p.m;
-					var pc = hexToRgb(op.color);
-					var opc = hexToRgb(p.color);
-					var t = op.m/totalMass;
-					var r = Math.floor(t*pc.r + (1-t)*opc.r);
-					var g = Math.floor(t*pc.g + (1-t)*opc.g);
-					var b = Math.floor(t*pc.b + (1-t)*opc.b);
-					_collisions.push(new Planet(totalMass, (op.x*op.m + p.x*p.m)/totalMass, (op.y*op.m + p.y*p.m)/totalMass, (op.vx*op.m + p.vx*p.m)/totalMass, (op.vy*op.m + p.vy*p.m)/totalMass, rgbToHex(r,g,b)));
+	if(settings.collisions) {
+		for(var j = 0; j<_planets.length; j++) {
+			var p = _planets[j];
+			for(var i = j+1; i<_planets.length; i++) {
+				var op = _planets[i];
+				if(!p.collided && !op.collided) {
+					var xdiff = (op.x-p.x);
+					var ydiff = (op.y-p.y);
+					var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
+					var d = Math.sqrt(dsquared);
+					if(d < op.r + p.r) {
+						op.collided = true;
+						p.collided = true;
+						var totalMass = op.m+p.m;
+						var pc = hexToRgb(op.color);
+						var opc = hexToRgb(p.color);
+						var t = op.m/totalMass;
+						var r = Math.floor(t*pc.r + (1-t)*opc.r);
+						var g = Math.floor(t*pc.g + (1-t)*opc.g);
+						var b = Math.floor(t*pc.b + (1-t)*opc.b);
+						_collisions.push(new Planet(totalMass, (op.x*op.m + p.x*p.m)/totalMass, (op.y*op.m + p.y*p.m)/totalMass, (op.vx*op.m + p.vx*p.m)/totalMass, (op.vy*op.m + p.vy*p.m)/totalMass, rgbToHex(r,g,b)));
+					}
 				}
 			}
 		}
-	}
 
-	for(var j = 0; j<_planets.length; j++) {
-		var p = _planets[j];
-		if(p.collided) {
-			_planets.splice(j--, 1);
+		for(var j = 0; j<_planets.length; j++) {
+			var p = _planets[j];
+			if(p.collided) {
+				_planets.splice(j--, 1);
+			}
 		}
-	}
 
-	for(var i = 0; i<_collisions.length; i++) {
-		_planets.push(_collisions.pop());
+		for(var i = 0; i<_collisions.length; i++) {
+			_planets.push(_collisions.pop());
+		}
 	}
 
 	var thisLoop = new Date();
@@ -248,7 +252,7 @@ function nsquaredacceleration(j, x, y) {
 			var xdiff = (op.x-x);
 			var ydiff = (op.y-y);
 			var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
-			var d = Math.sqrt(dsquared);
+			var d = Math.max(Math.sqrt(dsquared), 1.8);
 			
 			var accel = op.m/dsquared;
 			deltaAx += (accel*xdiff)/d;
