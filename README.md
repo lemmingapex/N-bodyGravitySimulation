@@ -2,13 +2,13 @@ Stupid HTML & JS Gravity Simulator
 ==================================
 
 RUN
-===
+---
 
 Open index.html in google chrome.
 
 
 ABOUT
-=====
+-----
 
 A stupid particle model of universal gravitation.
 
