@@ -1,18 +1,29 @@
-_integrationValues = [ 'Runge Kutta 4', 'Euler', 'Verlet (todo)' ];
+_integrationValues = [ 'Runge Kutta 4', 'Euler', 'Verlet' ];
 _minMass = 1000;
 _maxMass = 100000;
 
-var settings = {
-    mass: 4000,
-    color: "#bbbb99",
-    trailOpacity: .24,
-    timeStep: 1/75,
-    integration: _integrationValues[0],
-    barnesHut: false,
-    collisions: true,
-    clear: function() {
-    	_doClear = true;
-    }
+_settings = {
+	mass: 4000,
+	color: "#bbbb99",
+	trailOpacity: .24,
+	timeStep: 1/75,
+	integration: _integrationValues[0],
+	barnesHut: false,
+	collisions: true,
+	damping: 0,
+	clear: function() {
+		_doClear = true;
+	},
+	reset: function() {
+		_settings.mass = 4000;
+		_settings.color = "#bbbb99";
+		_settings.trailOpacity = .24;
+		_settings.timeStep = 1/75;
+		_settings.integration = _integrationValues[0];
+		_settings.barnesHut = false;
+		_settings.collisions = true;
+		_settings.damping = 0;
+	}
 };
 
 _doClear = false;
@@ -59,10 +70,14 @@ function mouseMove(e) {
 	_currentX = e.clientX - _can.offsetLeft;
 	_currentY = e.clientY - _can.offsetTop;
 
+	var xdiff = (_currentX-oldX);
+	var ydiff = (_currentY-oldY);
 	if(_ctrlDown && !_mouseDown) {
 		for(var i = 0; i<_planets.length; i++) {
-			_planets[i].x = _planets[i].x + (_currentX-oldX);
-			_planets[i].y = _planets[i].y + (_currentY-oldY);
+			_planets[i].x += xdiff;
+			_planets[i].ox +=  xdiff;
+			_planets[i].y += ydiff;
+			_planets[i].oy += ydiff;
 		}
 	}
 }
@@ -78,7 +93,7 @@ function mouseUp(e) {
 	} else {
 		_rightClick = false;
 		_mouseDown = false;
-		_planets.push(new Planet(settings.mass, _clickX, _clickY, vx, vy));
+		_planets.push(new Planet(_settings.mass, _clickX, _clickY, vx, vy));
 	}
 
 }
@@ -113,14 +128,21 @@ function drawLine(x1, y1, x2, y2) {
 function init() {
 	// gui
 	var gui = new dat.GUI();
-	gui.add(settings, 'clear');
-	gui.add(settings, 'mass', _minMass, _maxMass).step(1000);
-	gui.addColor(settings, 'color');
-	gui.add(settings, 'trailOpacity', 0.0, 1.0).step(.01);
-	gui.add(settings, 'timeStep', 1/250, 1/5);
-	gui.add(settings, 'integration', _integrationValues);
-	gui.add(settings, 'collisions');
-	//gui.add(settings, 'barnesHut');
+	gui.add(_settings, 'reset').name('Reset Controls');
+	var newPlanetSettings = gui.addFolder('New Planet Settings');
+	newPlanetSettings.add(_settings, 'mass', _minMass, _maxMass).step(1000).name('Mass').listen();
+	newPlanetSettings.addColor(_settings, 'color').name('Color').listen();
+	newPlanetSettings.open();
+	var globalSettings = gui.addFolder('Global Settings');
+	globalSettings.add(_settings, 'clear').name('Remove Planets').listen();
+	globalSettings.add(_settings, 'trailOpacity', 0.0, 1.0).step(.01).name('Trail Opacity').listen();
+	globalSettings.add(_settings, 'timeStep', 1/250, 1/5).name('Time Step').listen();
+	globalSettings.add(_settings, 'integration', _integrationValues).name('Integration').listen();
+	globalSettings.add(_settings, 'collisions').name('Collisions?').listen();
+	globalSettings.add(_settings, 'damping', 0, 100).name('Damping').listen();
+	//globalSettings.add(_settings, 'barnesHut').name('Barnes Hut?').listen();
+	globalSettings.open();
+	
 
 	// background
 	_canbak = document.getElementById('canbak');
@@ -168,7 +190,6 @@ function init() {
 
 function stats() {
 	_stats.innerHTML = _planets.length + " planets";
-	_blurb.style.color = settings.color;
 }
 
 function run() {
@@ -181,7 +202,7 @@ function run() {
 		takeStep(j);
 	}
 	// collisions
-	if(settings.collisions) {
+	if(_settings.collisions) {
 		for(var j = 0; j<_planets.length; j++) {
 			var p = _planets[j];
 			for(var i = j+1; i<_planets.length; i++) {
@@ -227,7 +248,7 @@ function run() {
 
 function reDraw() {
 	_ctxbak.clearRect(0, 0, _can.width, _can.height);
-	var alpha = settings.trailOpacity;
+	var alpha = _settings.trailOpacity;
 	if(_ctrlDown || _doClear) {
 		alpha = 1.0;
 	}
@@ -252,7 +273,7 @@ function nsquaredacceleration(j, x, y) {
 			var xdiff = (op.x-x);
 			var ydiff = (op.y-y);
 			var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
-			var d = Math.max(Math.sqrt(dsquared), 1.8);
+			var d = Math.max(Math.sqrt(dsquared), 1.5);
 			
 			var accel = op.m/dsquared;
 			deltaAx += (accel*xdiff)/d;
@@ -264,51 +285,75 @@ function nsquaredacceleration(j, x, y) {
 
 function takeStep(j) {
 	var p = _planets[j];
+	var px = p.x;
+	var py = p.y;
 	var pp = _prevPlanets[j];
 	var ppx = pp.x;
 	var ppy = pp.y;
 	var ppvx = pp.vx;
 	var ppvy = pp.vy;
-	var h = settings.timeStep;
+	var h = _settings.timeStep;
+	var f = _settings.damping/2000;
 	// euler
-	if(settings.integration == _integrationValues[1]) {
+	if(_settings.integration == _integrationValues[1]) {
 		var a = nsquaredacceleration(j, ppx, ppy);
-		p.vx += a[0]*h;
-		p.vy += a[1]*h;
+		p.vx = (1 - f)*p.vx + a[0]*h;
+		p.vy = (1 - f)*p.vy + a[1]*h;
 		p.x += p.vx*h;
+		p.ox = px;
 		p.y += p.vy*h;
-	} else if(settings.integration == _integrationValues[0]) { // rk4
+		p.oy = py;
+	} else if(_settings.integration == _integrationValues[0]) { // rk4
 		var x1 = ppx;
 		var y1 = ppy;
-		var vx1 = ppvx;
-		var vy1 = ppvy;
+		var vx1 = (1 - f)*ppvx;
+		var vy1 = (1 - f)*ppvy;
 		var a1 = nsquaredacceleration(j, x1, y1);
 
 		var x2 = ppx + 0.5*vx1*h;
 		var y2 = ppy + 0.5*vy1*h;
-		var vx2 = ppvx + 0.5*a1[0]*h;
-		var vy2 = ppvy + 0.5*a1[1]*h;
+		var vx2 = (1 - f)*ppvx + 0.5*a1[0]*h;
+		var vy2 = (1 - f)*ppvy + 0.5*a1[1]*h;
 		var a2 = nsquaredacceleration(j, x2, y2);
 
 		var x3 = ppx + 0.5*vx2*h;
 		var y3 = ppy + 0.5*vy2*h;
-		var vx3 = ppvx + 0.5*a2[0]*h;
-		var vy3 = ppvy + 0.5*a2[1]*h;
+		var vx3 = (1 - f)*ppvx + 0.5*a2[0]*h;
+		var vy3 = (1 - f)*ppvy + 0.5*a2[1]*h;
 		var a3 = nsquaredacceleration(j, x3, y3);
 
 		var x4 = ppx + vx3*h;
 		var y4 = ppy + vy3*h;
-		var vx4 = ppvx + a3[0]*h;
-		var vy4 = ppvy + a3[1]*h;
+		var vx4 = (1 - f)*ppvx + a3[0]*h;
+		var vy4 = (1 - f)*ppvy + a3[1]*h;
 		var a4 = nsquaredacceleration(j, x4, y4);
 
-		p.vx += (h/6.0)*(a1[0] + 2.0*a2[0] + 2.0*a3[0] + a4[0]);
-		p.vy += (h/6.0)*(a1[1] + 2.0*a2[1] + 2.0*a3[1] + a4[1]);
+		p.vx = (1 - f)*p.vx + (h/6.0)*(a1[0] + 2.0*a2[0] + 2.0*a3[0] + a4[0]);
+		p.vy = (1 - f)*p.vy + (h/6.0)*(a1[1] + 2.0*a2[1] + 2.0*a3[1] + a4[1]);
 
 		p.x += (h/6.0)*(vx1 + 2.0*vx2 + 2.0*vx3 + vx4);
+		p.ox = px;
 		p.y += (h/6.0)*(vy1 + 2.0*vy2 + 2.0*vy3 + vy4);
-	} else if(settings.integration == _integrationValues[1]) { // verlet
-		// todo
+		p.oy = py;
+	} else if(_settings.integration == _integrationValues[2]) { // verlet
+		var a = nsquaredacceleration(j, ppx, ppy);
+		if(p.isnew) {
+			p.ox = p.x;
+			p.x += (p.vx*h) + (0.5*a[0]*h*h);
+			p.vx = (p.x - p.ox)/h;
+			p.oy = p.y;
+			p.y += (p.vy*h) + (0.5*a[1]*h*h);			
+			p.vy = (p.y - p.oy)/h;
+
+			p.isnew = false;
+		} else {
+			p.x = ((2 - f)*p.x - (1 - f)*p.ox) + a[0]*h*h;
+			p.ox = px;
+			p.vx = (p.x - p.ox)/h;
+			p.y = ((2 - f)*p.y - (1 - f)*p.oy) + a[1]*h*h;
+			p.oy = py;
+			p.vy = (p.y - p.oy)/h;
+		}
 	}
 }
 
@@ -322,15 +367,18 @@ function Planet(pm, px, py, pvx, pvy, color) {
 	this.m = pm;
 	this.r = Math.log(Math.E + pm/_minMass);
 	if(typeof(color)==='undefined') {
-		this.color = settings.color;
+		this.color = _settings.color;
 	} else {
 		this.color = color;
 	}
 	this.x = px;
 	this.y = py;
+	this.ox = 0;
+	this.oy = 0;
 	this.vx = pvx;
 	this.vy = pvy;
 	this.collided = false;
+	this.isnew = true;
 
 	this.draw = function( ctx ) {
     	ctx.beginPath();
@@ -342,21 +390,21 @@ function Planet(pm, px, py, pvx, pvy, color) {
 
 function system(ix, iy, ivx, ivy) {
 	var sign = (Math.random()>0.5)?1:-1;
-	for(var i = 0; i<500; i++) {
+	for(var i = 0; i<300; i++) {
 		var dd = Math.min(_can.width, _can.height);
 		var r = Math.random()*dd/2;
 		var theta = Math.random()*Math.PI*2;
 		var x = r*Math.cos(theta);
 		var y = r*Math.sin(theta);
 
-		var m = settings.mass + ((Math.random()*2)-1)*(settings.mass/5.0);
+		var m = _settings.mass + ((Math.random()*2)-1)*(_settings.mass/4.0);
 		var v = Math.min((2800.0*Math.pow(r, -1.0/2.0) + 30)+Math.pow((m/_minMass)*1.3, 2.6), 1000.00);
 		var vx = v*Math.cos(theta+(Math.PI*sign/2));
 		var vy = v*Math.sin(theta+(Math.PI*sign/2));
 
 		_planets.push(new Planet(m, ix+x, iy+y, vx+ivx, vy+ivy));
 	}
-	_planets.push(new Planet((settings.mass)*8000, ix, iy, ivx, ivy));
+	_planets.push(new Planet((_settings.mass)*8000, ix, iy, ivx, ivy));
 }
 
 function hexToRgb(hex) {

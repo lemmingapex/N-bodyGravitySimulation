@@ -20,7 +20,7 @@ canvas
 }
 
 #canbak {
-  pointer-events:none;
+	pointer-events:none;
 }
 
 .info {
