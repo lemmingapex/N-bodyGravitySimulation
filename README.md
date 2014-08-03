@@ -1,13 +1,15 @@
 Stupid HTML & JS Gravity Simulator
 ==================================
 
-RUN
+![alt text](screenshot.png "screenshot")
+
+Run
 ---
 
 Open index.html in google chrome.
 
 
-ABOUT
+About
 -----
 
 A stupid particle model of universal gravitation.
