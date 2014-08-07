@@ -210,8 +210,7 @@ function run() {
 				if(!p.collided && !op.collided) {
 					var xdiff = (op.x-p.x);
 					var ydiff = (op.y-p.y);
-					var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
-					var d = Math.sqrt(dsquared);
+					var d = Math.sqrt((xdiff*xdiff)+(ydiff*ydiff));
 					if(d < op.r + p.r) {
 						op.collided = true;
 						p.collided = true;
@@ -264,7 +263,7 @@ function reDraw() {
 	}
 }
 
-function nsquaredacceleration(j, x, y) {
+function nsquaredacceleration(j, x, y, r) {
 	var deltaAx = 0;
 	var deltaAy = 0;
 	for(var i = 0; i<_prevPlanets.length; i++) {
@@ -272,10 +271,9 @@ function nsquaredacceleration(j, x, y) {
 		if(i != j) {
 			var xdiff = (op.x-x);
 			var ydiff = (op.y-y);
-			var dsquared = (xdiff*xdiff)+(ydiff*ydiff);
-			var d = Math.max(Math.sqrt(dsquared), 1.5);
+			var d = Math.max(Math.sqrt((xdiff*xdiff)+(ydiff*ydiff)), r + op.r);
 			
-			var accel = op.m/dsquared;
+			var accel = op.m/(d*d);
 			deltaAx += (accel*xdiff)/d;
 			deltaAy += (accel*ydiff)/d;
 		}
@@ -296,7 +294,7 @@ function takeStep(j) {
 	var f = _settings.damping/2000;
 	// euler
 	if(_settings.integration == _integrationValues[1]) {
-		var a = nsquaredacceleration(j, ppx, ppy);
+		var a = nsquaredacceleration(j, ppx, ppy, pp.r);
 		p.vx = (1 - f)*p.vx + a[0]*h;
 		p.vy = (1 - f)*p.vy + a[1]*h;
 		p.x += p.vx*h;
@@ -308,25 +306,25 @@ function takeStep(j) {
 		var y1 = ppy;
 		var vx1 = (1 - f)*ppvx;
 		var vy1 = (1 - f)*ppvy;
-		var a1 = nsquaredacceleration(j, x1, y1);
+		var a1 = nsquaredacceleration(j, x1, y1, pp.r);
 
 		var x2 = ppx + 0.5*vx1*h;
 		var y2 = ppy + 0.5*vy1*h;
 		var vx2 = (1 - f)*ppvx + 0.5*a1[0]*h;
 		var vy2 = (1 - f)*ppvy + 0.5*a1[1]*h;
-		var a2 = nsquaredacceleration(j, x2, y2);
+		var a2 = nsquaredacceleration(j, x2, y2, pp.r);
 
 		var x3 = ppx + 0.5*vx2*h;
 		var y3 = ppy + 0.5*vy2*h;
 		var vx3 = (1 - f)*ppvx + 0.5*a2[0]*h;
 		var vy3 = (1 - f)*ppvy + 0.5*a2[1]*h;
-		var a3 = nsquaredacceleration(j, x3, y3);
+		var a3 = nsquaredacceleration(j, x3, y3, pp.r);
 
 		var x4 = ppx + vx3*h;
 		var y4 = ppy + vy3*h;
 		var vx4 = (1 - f)*ppvx + a3[0]*h;
 		var vy4 = (1 - f)*ppvy + a3[1]*h;
-		var a4 = nsquaredacceleration(j, x4, y4);
+		var a4 = nsquaredacceleration(j, x4, y4, pp.r);
 
 		p.vx = (1 - f)*p.vx + (h/6.0)*(a1[0] + 2.0*a2[0] + 2.0*a3[0] + a4[0]);
 		p.vy = (1 - f)*p.vy + (h/6.0)*(a1[1] + 2.0*a2[1] + 2.0*a3[1] + a4[1]);
@@ -336,7 +334,7 @@ function takeStep(j) {
 		p.y += (h/6.0)*(vy1 + 2.0*vy2 + 2.0*vy3 + vy4);
 		p.oy = py;
 	} else if(_settings.integration == _integrationValues[2]) { // verlet
-		var a = nsquaredacceleration(j, ppx, ppy);
+		var a = nsquaredacceleration(j, ppx, ppy, pp.r);
 		if(p.isnew) {
 			p.ox = p.x;
 			p.x += (p.vx*h) + (0.5*a[0]*h*h);
@@ -355,12 +353,6 @@ function takeStep(j) {
 			p.vy = (p.y - p.oy)/h;
 		}
 	}
-}
-
-function distanceSquared(p1, p2) {
-	var xdiff = (p2.x-p1.x);
-	var ydiff = (p2.y-p1.y);
-	return (xdiff*xdiff)+(ydiff*ydiff);
 }
 
 function Planet(pm, px, py, pvx, pvy, color) {
