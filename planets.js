@@ -1,4 +1,5 @@
 _integrationValues = [ 'Runge Kutta 4', 'Euler', 'Verlet' ];
+_collisionValues = [ 'Combine', 'Bounce', 'None' ];
 _minMass = 1000;
 _maxMass = 100000;
 
@@ -9,7 +10,7 @@ _settings = {
 	timeStep: 1/75,
 	integration: _integrationValues[0],
 	barnesHut: false,
-	collisions: true,
+	collisions: _collisionValues[0],
 	damping: 0,
 	clear: function() {
 		_doClear = true;
@@ -21,7 +22,7 @@ _settings = {
 		_settings.timeStep = 1/75;
 		_settings.integration = _integrationValues[0];
 		_settings.barnesHut = false;
-		_settings.collisions = true;
+		_settings.collisions = _collisionValues[0];
 		_settings.damping = 0;
 	}
 };
@@ -138,7 +139,7 @@ function init() {
 	globalSettings.add(_settings, 'trailOpacity', 0.0, 1.0).step(.01).name('Trail Opacity').listen();
 	globalSettings.add(_settings, 'timeStep', 1/250, 1/5).name('Time Step').listen();
 	globalSettings.add(_settings, 'integration', _integrationValues).name('Integration').listen();
-	globalSettings.add(_settings, 'collisions').name('Collisions?').listen();
+	globalSettings.add(_settings, 'collisions', _collisionValues).name('Collisions').listen();
 	globalSettings.add(_settings, 'damping', 0, 100).name('Damping').listen();
 	//globalSettings.add(_settings, 'barnesHut').name('Barnes Hut?').listen();
 	globalSettings.open();
@@ -197,12 +198,18 @@ function run() {
 	drawVelocityLine();
 	stats();
 
-	_prevPlanets = _planets.slice();
+	_prevPlanets = [];
+
+	for(var j = 0; j<_planets.length; j++) {
+		var p = _planets[j];
+		_prevPlanets.push(new Planet(p.m, p.x, p.y, p.vx, p.vy, p.color));
+	}
+
 	for(var j = 0; j<_planets.length; j++) {
 		takeStep(j);
 	}
 	// collisions
-	if(_settings.collisions) {
+	if(_settings.collisions == _collisionValues[0]) {
 		for(var j = 0; j<_planets.length; j++) {
 			var p = _planets[j];
 			for(var i = j+1; i<_planets.length; i++) {
@@ -215,6 +222,7 @@ function run() {
 						op.collided = true;
 						p.collided = true;
 						var totalMass = op.m+p.m;
+						// combine the colors all nice like.
 						var pc = hexToRgb(op.color);
 						var opc = hexToRgb(p.color);
 						var t = op.m/totalMass;
@@ -236,6 +244,82 @@ function run() {
 
 		for(var i = 0; i<_collisions.length; i++) {
 			_planets.push(_collisions.pop());
+		}
+	} else if(_settings.collisions == _collisionValues[1]) {
+
+		// javascript doesn't have a clone or deepcopy for objects.... great
+		var _planetsCopy = [];
+
+		for(var j = 0; j<_planets.length; j++) {
+			var p = _planets[j];
+			_planetsCopy.push(new Planet(p.m, p.x, p.y, p.vx, p.vy, p.color));
+		}
+
+		// runtime is poor, eh?
+		for(var j = 0; j<_planets.length; j++) {
+			var p = _planets[j];
+			for(var i = 0; i<_planetsCopy.length; i++) {
+				if(i == j) {
+					continue;
+				}
+				var op = _planetsCopy[i];
+				// need to normalize these later...
+				var xdiff = (op.x-p.x);
+				var ydiff = (op.y-p.y);
+				var d = Math.sqrt((xdiff*xdiff)+(ydiff*ydiff));
+				if(d < op.r + p.r) {
+					// because of the double loop, the code inside this block is one-sided
+
+					// Calculate relative velocity
+					var vxdiff = op.vx - p.vx;
+					var vydiff = op.vy - p.vy;
+
+					// Calculate relative velocity in the normal direction
+					// deltaV dot N
+					var velAlongNormal = (vxdiff * (xdiff/d)) + (vydiff * (ydiff/d));
+
+					// Do not resolve if velocities are separating
+					if(velAlongNormal < 0) {
+						// restitution, could be per planet
+						var e = 0.9;
+
+						// inverse mass is used all over the place...
+						var pim = 1.0/p.m;
+						var opim = 1.0/op.m;
+
+						// calculate impulse scalar
+						// derived from conservation of momentum and impulse along the collision normal
+						// see http://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331 for details
+						var t = -1.0 * (1.0 + e) * velAlongNormal / (pim + opim);
+
+						// find impulse
+						var impulsex = t * (xdiff/d);
+						var impulsey = t * (ydiff/d);
+
+						// find new velocities
+						var newpvx = p.vx - (pim * impulsex);
+						var newpvy = p.vy - (pim * impulsey);
+						p.vx = newpvx;
+						p.vy = newpvy;
+
+						var newopvx = op.vx + (opim * impulsex);
+						var newopvy = op.vy + (opim * impulsey);
+
+						// positional correction via linear projection due to floating point errors...  Stupid computers
+						var penetration = op.r + p.r - d;
+						var correctionPercentage = 0.25;
+						var epsilon = 0.001;
+						var correctionx = (Math.max(penetration - epsilon, 0.0) / (pim + opim)) * correctionPercentage * (xdiff/d);
+						var correctiony = (Math.max(penetration - epsilon, 0.0) / (pim + opim)) * correctionPercentage * (ydiff/d);
+						var newpx = p.x - pim*correctionx;
+						p.x = newpx;
+						var newpy = p.y - pim*correctiony;
+						p.y = newpy;
+						var newopx = op.x + opim*correctionx;
+						var newopy = op.y + opim*correctiony;
+					}
+				}
+			}
 		}
 	}
 
