@@ -1,20 +1,17 @@
-Stupid HTML & JS Gravity Simulator
-==================================
+#HTML5 & JS Gravity Simulator
 
 ![alt text](screenshot.png "screenshot")
 
-Run
----
+##Run
 
 [See it in action](http://lemmingapex.github.io/PlanetsGravitySimulator/)
 
 Open index.html in google chrome.
 
 
-About
------
+##About
 
-A stupid particle model of universal gravitation.
+A particle model of universal gravitation.
 
 Numerical Integration methods: Euler, Runge–Kutta 4, Verlet.
 
