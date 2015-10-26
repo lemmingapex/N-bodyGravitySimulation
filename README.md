@@ -1,15 +1,15 @@
-#N-body Gravity Simulator
+# N-body Gravity Simulation
 
 ![alt text](screenshot.png "screenshot")
 
-##Run
+## Run
 
-[See it in action](http://lemmingapex.github.io/PlanetsGravitySimulator/)
+[See it in action](https://lemmingapex.github.io/PlanetsGravitySimulator/)
 
 Open index.html in google chrome.
 
 
-##About
+## About
 
 A [N-body simulation](https://en.wikipedia.org/wiki/N-body_simulation) of [Newton's law of universal gravitation](https://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation) written in javascript.
 
