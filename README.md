@@ -1,4 +1,4 @@
-#HTML5 & JS Gravity Simulator
+#N-body Gravity Simulator
 
 ![alt text](screenshot.png "screenshot")
 
@@ -11,10 +11,10 @@ Open index.html in google chrome.
 
 ##About
 
-A particle model of universal gravitation.
+A [N-body simulation](https://en.wikipedia.org/wiki/N-body_simulation) of [Newton's law of universal gravitation](https://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation) written in javascript.
 
-Numerical Integration methods: Euler, Runge–Kutta 4, Verlet.
+Numerical Integration methods: [Euler](https://en.wikipedia.org/wiki/Euler_method), [Runge–Kutta 4](https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods), [Verlet](https://en.wikipedia.org/wiki/Verlet_integration).
 
-Currently calculating acceleration in O(n^2) time.  Would like to include a Barnes-Hut simulation in the furtue.
+Calculating accelerations in O(_n<sup>2</sup>_) time.  Would like to include a [Barnes-Hut](https://en.wikipedia.org/wiki/Barnes%E2%80%93Hut_simulation) option to do this calculation in O(_n*log(n)_).
 
-Control GUI from <a href="https://code.google.com/p/dat-gui/">dat.gui</a>
+Control GUI from [dat.gui](https://github.com/dataarts/dat.gui)
