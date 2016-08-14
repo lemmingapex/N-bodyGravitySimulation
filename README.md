@@ -4,7 +4,7 @@
 
 ## Run
 
-[See it in action](https://lemmingapex.github.io/PlanetsGravitySimulator/)
+[See it in action](https://lemmingapex.github.io/N-bodyGravitySimulation/)
 
 Open index.html in google chrome.
 
