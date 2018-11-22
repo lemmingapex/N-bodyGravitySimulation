@@ -31,7 +31,7 @@ canvas
 	color: #BBBB99;
 	position:absolute;
 	pointer-events:none;
-	z-index:4;
+	z-index: 4;
 }
 
 .info h1 {
@@ -46,3 +46,6 @@ canvas
 	top: 10px;
 }
 
+.dg.ac {
+	z-index: 5 !important;
+}

@@ -44,13 +44,8 @@ _initRadius = Math.log(Math.E + 1.0);
 function eventResize() {
 	_can.width = window.innerWidth;
 	_can.height = window.innerHeight;
-	_can.style.left = (window.innerWidth - _can.width) * .5 + 'px';
-	_can.style.top = (window.innerHeight - _can.height) * .5 + 'px';
-
 	_canbak.width = window.innerWidth;
 	_canbak.height = window.innerHeight;
-	_canbak.style.left = (window.innerWidth - _canbak.width) * .5 + 'px';
-	_canbak.style.top = (window.innerHeight - _canbak.height) * .5 + 'px';
 }
 
 function drawVelocityLine() {
@@ -130,20 +125,20 @@ function init() {
 	// gui
 	var gui = new dat.GUI();
 	gui.add(_settings, 'reset').name('Reset Controls');
-	var newPlanetSettings = gui.addFolder('New Planet Settings');
+	var newPlanetSettings = gui.addFolder('New Planet Controls');
 	newPlanetSettings.add(_settings, 'mass', _minMass, _maxMass).step(1000).name('Mass').listen();
 	newPlanetSettings.addColor(_settings, 'color').name('Color').listen();
 	newPlanetSettings.open();
-	var globalSettings = gui.addFolder('Global Settings');
+	var globalSettings = gui.addFolder('Global Controls');
 	globalSettings.add(_settings, 'clear').name('Remove Planets').listen();
 	globalSettings.add(_settings, 'trailOpacity', 0.0, 1.0).step(.01).name('Trail Opacity').listen();
-	globalSettings.add(_settings, 'timeStep', 1/250, 1/5).name('Time Step').listen();
+	globalSettings.add(_settings, 'timeStep', 1/250, 1/5).name('Time Step');
 	globalSettings.add(_settings, 'integration', _integrationValues).name('Integration').listen();
 	globalSettings.add(_settings, 'collisions', _collisionValues).name('Collisions').listen();
 	globalSettings.add(_settings, 'damping', 0, 100).name('Damping').listen();
 	//globalSettings.add(_settings, 'barnesHut').name('Barnes Hut?').listen();
 	globalSettings.open();
-	
+
 
 	// background
 	_canbak = document.getElementById('canbak');
@@ -172,6 +167,21 @@ function init() {
 	_can.onkeydown = keydown;
 	_can.onkeyup = keyup;
 	_can.onselectstart = function () { return false; };
+
+	_can.addEventListener("touchstart", (e) => {
+		if (e.touches.length > 1) {
+			_ctrlDown = true;
+		}
+	});
+	_can.addEventListener("touchmove", (e) => {
+		if (e.touches.length > 1) {
+			mouseMove(e);
+		}
+	});
+	_can.addEventListener("touchend", (e) => {
+		_ctrlDown = false;
+	});
+
 
 	_ctx = _can.getContext('2d');
 
@@ -356,7 +366,7 @@ function nsquaredacceleration(j, x, y, r) {
 			var xdiff = (op.x-x);
 			var ydiff = (op.y-y);
 			var d = Math.max(Math.sqrt((xdiff*xdiff)+(ydiff*ydiff)), r + op.r);
-			
+
 			var accel = op.m/(d*d);
 			deltaAx += (accel*xdiff)/d;
 			deltaAy += (accel*ydiff)/d;
@@ -424,7 +434,7 @@ function takeStep(j) {
 			p.x += (p.vx*h) + (0.5*a[0]*h*h);
 			p.vx = (p.x - p.ox)/h;
 			p.oy = p.y;
-			p.y += (p.vy*h) + (0.5*a[1]*h*h);			
+			p.y += (p.vy*h) + (0.5*a[1]*h*h);
 			p.vy = (p.y - p.oy)/h;
 
 			p.isnew = false;
@@ -503,4 +513,3 @@ function rgbToHex(r, g, b) {
 
 window.addEventListener('resize', eventResize, false);
 window.onload = init;
-
