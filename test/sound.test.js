@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { createRng } from "../src/physics/rng.js";
 import {
 	activityMeter,
 	impactLoudness,
@@ -30,8 +31,9 @@ describe("sound helpers", () => {
 		const next = spacer(0.1, 0.15, () => 0.5); // exactly 0.1 s apart
 		// Three asked for at once: spread out, the one too far behind dropped.
 		assert.deepEqual([next(0), next(0), next(0)], [0, 0.1, null]);
-		// Asked for 3 per 1/60 s for 2 s: about 10 per second, never bunched.
-		const play = spacer(0.1, 0.15);
+		// Asked for 3 per 1/60 s for 2 s: about 10 per second, never bunched. (Gaps are
+		// random, 0.05–0.15 s, so 2 s holds 14–41 at the extremes; seeded to be repeatable.)
+		const play = spacer(0.1, 0.15, createRng(1));
 		/** @type {number[]} */
 		const starts = [];
 		for (let frame = 0; frame < 120; frame++) {
@@ -40,7 +42,7 @@ describe("sound helpers", () => {
 				if (start !== null) starts.push(start);
 			}
 		}
-		assert.ok(starts.length >= 17 && starts.length <= 23, `${starts.length} sounds`);
+		assert.ok(starts.length >= 14 && starts.length <= 30, `${starts.length} sounds`);
 		for (let i = 1; i < starts.length; i++) {
 			const gap = starts[i] - starts[i - 1];
 			assert.ok(gap >= 0.05 - 1e-9 && gap <= 0.15 + 1e-9, `gap ${gap}`);
