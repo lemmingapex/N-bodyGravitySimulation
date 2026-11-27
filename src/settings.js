@@ -235,7 +235,7 @@ export const SCHEMA = Object.freeze({
 		default: "disk",
 		options: optionsOf(PRESETS),
 		label: "Scenario",
-		hint: "Replace everything with this scenario. Keys 1–9 and 0 load the first ten.",
+		hint: "Replace everything with this scenario, which sets its own physics, speed and trail length (Restart keeps your changes). Keys 1–9 and 0 load the first ten.",
 	}),
 });
 
@@ -279,6 +279,44 @@ export function defaultSettings() {
 	return /** @type {Settings} */ (
 		Object.fromEntries(Object.entries(SCHEMA).map(([key, field]) => [key, field.default]))
 	);
+}
+
+/**
+ * Settings that belong to a scenario rather than to the user: how it behaves and
+ * looks. Switching scenarios sets every one of them (the scenario's own value, or
+ * the default), so nothing one scenario needs leaks into the next. Tools, view and
+ * sound settings carry over.
+ *
+ * @type {ReadonlyArray<SettingKey>}
+ */
+export const SCENARIO_SETTINGS = Object.freeze([
+	"integrator",
+	"solver",
+	"theta",
+	"adaptive",
+	"maxSubsteps",
+	"mergeChance",
+	"bounceChance",
+	"restitution",
+	"drag",
+	"speed",
+	"trailLength",
+]);
+
+/**
+ * Every {@link SCENARIO_SETTINGS} value for a scenario, plus the scenario itself.
+ *
+ * @param {string} id Scenario (preset) id.
+ * @returns {Partial<Settings>}
+ */
+export function scenarioSettings(id) {
+	const preset = PRESETS.find((p) => p.id === id) ?? PRESETS[0];
+	const defaults = /** @type {Record<string, unknown>} */ (defaultSettings());
+	return {
+		...Object.fromEntries(SCENARIO_SETTINGS.map((key) => [key, defaults[key]])),
+		...preset.settings,
+		preset: preset.id,
+	};
 }
 
 /**

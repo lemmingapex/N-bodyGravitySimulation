@@ -639,6 +639,43 @@ describe("desktop", () => {
 		await context.close();
 	});
 
+	it("each scenario sets its own settings; restarts and reloads keep your changes", async () => {
+		const { page, context, errors } = await openApp({ viewport: { width: 1280, height: 800 } });
+		const settings = () =>
+			page.evaluate(() => {
+				const s = /** @type {any} */ (window).nbody.settings;
+				return { preset: s.preset, trailLength: s.trailLength, speed: s.speed };
+			});
+		const load = (/** @type {string} */ id) =>
+			page.evaluate(
+				(preset) => /** @type {any} */ (window).nbody.setSettings({ preset }),
+				id,
+			);
+		const defaults = await settings();
+		assert.equal(defaults.preset, "disk");
+
+		await load("earth"); // as if picked in the panel
+		assert.equal((await settings()).trailLength, 0, "Sun, Earth & Moon has no trails");
+		await load("disk");
+		assert.deepEqual(await settings(), defaults, "the disk's own trails come back");
+
+		// Changes made within a scenario survive restarting it, and reloading.
+		await load("figure8");
+		await page.evaluate(() => /** @type {any} */ (window).nbody.setSettings({ speed: 2 }));
+		await page.evaluate(() => {
+			const app = /** @type {any} */ (window).nbody;
+			app.loadPreset(app.settings.preset); // Restart scenario
+		});
+		assert.equal((await settings()).speed, 2, "restart keeps your changes");
+		await page.reload();
+		await page.waitForFunction(
+			() => /** @type {any} */ (window).nbody?.client.bodies.length > 0,
+		);
+		assert.deepEqual(await settings(), { preset: "figure8", trailLength: 1, speed: 2 });
+		assert.deepEqual(errors, []);
+		await context.close();
+	});
+
 	it("reset settings shows the same values after a reload", async () => {
 		const { page, context, errors } = await openApp({ viewport: { width: 1280, height: 800 } });
 		// The spiral needs Barnes–Hut, leapfrog, no collisions, ...

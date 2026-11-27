@@ -586,7 +586,8 @@ export const PRESETS = Object.freeze([
 		name: "Solar system",
 		description: "Planets, an asteroid belt, a comet and a gas giant with moons.",
 		extent: 520,
-		settings: { mergeChance: 1, bounceChance: 0 },
+		// Trails long enough to draw the inner orbits as rings (~18 s).
+		settings: { mergeChance: 1, bounceChance: 0, trailLength: 0.7 },
 		// Spaced to stay stable for many orbits: the planets are well clear of each
 		// other's pull, the asteroids are too light to pull each other into collisions,
 		// and the belt is outside the giant's zone of chaotic orbits (wider the heavier
@@ -658,7 +659,7 @@ export const PRESETS = Object.freeze([
 		name: "Binary star",
 		description: "Two stars in a tight orbit with a circumbinary disk.",
 		extent: 440,
-		settings: { mergeChance: 1, bounceChance: 0 },
+		settings: { mergeChance: 1, bounceChance: 0, trailLength: 0.5 },
 		build(sim, { rng, color }) {
 			const m = 1.6e7;
 			const a = 80;
@@ -684,7 +685,9 @@ export const PRESETS = Object.freeze([
 		description:
 			"Three equal masses chasing each other along a figure eight (Chenciner & Montgomery, 2000).",
 		extent: 260,
-		settings: { mergeChance: 0, bounceChance: 0, drag: 0 },
+		// One loop takes ~90 s at 1×: run faster and keep the trails, which draw the
+		// figure eight and then stay crisp, as the motion repeats exactly.
+		settings: { mergeChance: 0, bounceChance: 0, drag: 0, speed: 3, trailLength: 1 },
 		build(sim) {
 			const m = 1e6;
 			const L = 200;
@@ -701,7 +704,7 @@ export const PRESETS = Object.freeze([
 		name: "Galaxy collision",
 		description: "Two disk galaxies on a close encounter, throwing out tidal tails.",
 		extent: 650,
-		settings: { mergeChance: 0, bounceChance: 0, solver: "barnes-hut" },
+		settings: { mergeChance: 0, bounceChance: 0, solver: "barnes-hut", trailLength: 0.3 },
 		build(sim, { rng }) {
 			// Equal-mass galaxies on a bound elliptical orbit (closest approach
 			// `periapsis`, farthest `apoapsis`), starting inbound at `separation`.
@@ -754,7 +757,7 @@ export const PRESETS = Object.freeze([
 		description:
 			"A slowly rotating cloud of dust that collapses and clumps into planets. It spins a random way each time.",
 		extent: 400,
-		settings: { mergeChance: 1, bounceChance: 0 },
+		settings: { mergeChance: 1, bounceChance: 0, trailLength: 0.35 },
 		build(sim, { rng }) {
 			const R = 350;
 			const specs = Array.from({ length: 400 }, () => {
@@ -787,7 +790,7 @@ export const PRESETS = Object.freeze([
 		description:
 			"A star and a giant planet with Trojan swarms librating around the stable L4 and L5 points, while bodies at L1–L3 drift away.",
 		extent: 360,
-		settings: { mergeChance: 0, bounceChance: 0 },
+		settings: { mergeChance: 0, bounceChance: 0, trailLength: 0.7 },
 		build(sim, { rng }) {
 			buildLagrange(sim, rng);
 		},
@@ -798,7 +801,8 @@ export const PRESETS = Object.freeze([
 		description:
 			"Probes slingshot past a moving planet: passing behind it speeds them up, passing in front slows them down.",
 		extent: 480,
-		settings: { mergeChance: 0, bounceChance: 0 },
+		// Long trails keep each probe's whole bent path on screen.
+		settings: { mergeChance: 0, bounceChance: 0, speed: 1.5, trailLength: 0.9 },
 		build(sim) {
 			buildFlyby(sim);
 		},
@@ -809,7 +813,7 @@ export const PRESETS = Object.freeze([
 		description:
 			"A rubble-pile moon that strayed inside its planet's Roche limit is pulled apart by tides into a stream that winds up into a ring.",
 		extent: 240,
-		settings: { mergeChance: 0, bounceChance: 0 },
+		settings: { mergeChance: 0, bounceChance: 0, trailLength: 0.6 },
 		build(sim, { rng }) {
 			buildBreakup(sim, rng);
 		},
@@ -828,6 +832,7 @@ export const PRESETS = Object.freeze([
 			bounceChance: 0,
 			theta: 0.7,
 			adaptive: false,
+			trailLength: 0.3,
 		},
 		build(sim, { rng }) {
 			buildSpiral(sim, rng);
@@ -839,7 +844,8 @@ export const PRESETS = Object.freeze([
 		description:
 			"A single Sun-like star and nothing else: click around it to build your own planetary system.",
 		extent: 300,
-		settings: { mergeChance: 1, bounceChance: 0 },
+		// Long trails show the orbits of the planets you add.
+		settings: { mergeChance: 1, bounceChance: 0, trailLength: 0.75 },
 		build(sim) {
 			// Same mass as the Solar system's Sun, so its planet distances work here too.
 			sim.addBody({ m: 3.2e7, x: 0, y: 0, color: "#ffd27a" });
@@ -850,7 +856,7 @@ export const PRESETS = Object.freeze([
 		name: "Empty space",
 		description: "Nothing at all. Add your own bodies.",
 		extent: 400,
-		settings: {},
+		settings: { trailLength: 0.75 },
 		build() {},
 	},
 ]);

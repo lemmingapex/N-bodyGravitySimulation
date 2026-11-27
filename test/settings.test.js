@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { parseHexColor } from "../src/physics/color.js";
+import { PRESETS } from "../src/physics/presets.js";
 import { createRng } from "../src/physics/rng.js";
 import { Simulation } from "../src/physics/simulation.js";
 import {
@@ -12,6 +13,8 @@ import {
 	randomSettings,
 	sanitizeSettings,
 	saveSettings,
+	SCENARIO_SETTINGS,
+	scenarioSettings,
 	SCHEMA,
 	simulationConfig,
 	STORAGE_KEY,
@@ -76,6 +79,32 @@ describe("settings", () => {
 		for (const [key, values] of seen) assert.ok(values.size > 1, `${key} varies`);
 		assert.ok(seen.get("drag")?.has(0), "often no drag");
 		assert.ok(seen.get("trailLength")?.has(1), "sometimes permanent trails");
+	});
+
+	it("give every scenario a full set of scenario settings", () => {
+		const defaults = /** @type {Record<string, unknown>} */ (defaultSettings());
+		for (const preset of PRESETS) {
+			for (const key of Object.keys(preset.settings)) {
+				assert.ok(
+					SCENARIO_SETTINGS.includes(/** @type {any} */ (key)),
+					`${preset.id} sets ${key}, which isn't a scenario setting`,
+				);
+			}
+			const own = scenarioSettings(preset.id);
+			assert.equal(own.preset, preset.id);
+			for (const key of SCENARIO_SETTINGS) assert.ok(key in own, `${preset.id}: ${key}`);
+		}
+		// The default scenario is what a first visit shows with the default settings.
+		const first = /** @type {Record<string, unknown>} */ (
+			scenarioSettings(SCHEMA.preset.default)
+		);
+		for (const key of SCENARIO_SETTINGS) assert.equal(first[key], defaults[key], key);
+		// What one scenario changes doesn't stick: the next one sets it again.
+		const settings = defaultSettings();
+		applySettings(settings, scenarioSettings("earth"));
+		assert.equal(settings.trailLength, 0);
+		applySettings(settings, scenarioSettings("disk"));
+		assert.equal(settings.trailLength, SCHEMA.trailLength.default);
 	});
 
 	it("sanitizes untrusted input", () => {

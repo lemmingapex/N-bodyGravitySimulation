@@ -17,9 +17,10 @@ import {
 	loadSettings,
 	randomSettings,
 	saveSettings,
-	trailSeconds,
+	scenarioSettings,
 	SCHEMA,
 	simulationConfig,
+	trailSeconds,
 } from "./settings.js";
 import { decodeShare, encodeShare, readShareHash } from "./share.js";
 import { Camera } from "./ui/camera.js";
@@ -151,6 +152,8 @@ class App {
 	client;
 
 	#presetSeed = randomSeed();
+	/** The scenario on screen, or null before the first one loads. */
+	#loadedPreset = /** @type {string | null} */ (null);
 	#rng = createRng();
 	#pendingSingleStep = false;
 	/** Simulated time owed to the physics engine (not yet requested). */
@@ -345,12 +348,21 @@ class App {
 	// ---------------------------------------------------------------- actions
 
 	/**
+	 * Replaces everything with a scenario. Switching to a different scenario also sets
+	 * its scenario settings (see `SCENARIO_SETTINGS`); restarting the same one keeps
+	 * any changes made since, and the first load keeps the saved (or shared) settings.
+	 *
 	 * @param {string} id
 	 * @param {{ quiet?: boolean, seed?: number }} [options]
 	 */
 	loadPreset(id, { quiet = false, seed = randomSeed() } = {}) {
 		const preset = getPreset(id);
-		const changed = applySettings(this.settings, { preset: preset.id, ...preset.settings });
+		const switching = this.#loadedPreset !== null && this.#loadedPreset !== preset.id;
+		applySettings(
+			this.settings,
+			switching ? scenarioSettings(preset.id) : { preset: preset.id },
+		);
+		this.#loadedPreset = preset.id;
 		this.client.configure(simulationConfig(this.settings));
 		this.panel?.refresh();
 		this.#scheduleSave();
@@ -366,12 +378,7 @@ class App {
 		this.#flashes = [];
 		if (!quiet) {
 			this.sound.arrive();
-			const adjusted = changed
-				.filter((k) => k !== "preset")
-				.map((k) => SCHEMA[/** @type {SettingKey} */ (k)].label.toLowerCase());
-			this.toast.show(
-				adjusted.length ? `${preset.name} (adjusted ${adjusted.join(", ")})` : preset.name,
-			);
+			this.toast.show(preset.name);
 		}
 	}
 
@@ -532,8 +539,7 @@ class App {
 	 * panel shows the same values before and after refreshing.
 	 */
 	resetSettings() {
-		const preset = getPreset(this.settings.preset);
-		this.#changeSettings({ ...defaultSettings(), preset: preset.id, ...preset.settings });
+		this.#changeSettings({ ...defaultSettings(), ...scenarioSettings(this.settings.preset) });
 		this.toast.show("Settings reset");
 	}
 
