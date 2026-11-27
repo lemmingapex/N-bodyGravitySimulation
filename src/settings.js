@@ -200,7 +200,7 @@ export const SCHEMA = Object.freeze({
 	}),
 	showHud: /** @type {BooleanField} */ ({
 		type: "boolean",
-		default: true,
+		default: false,
 		label: "Show stats",
 		hint: "Show the stats in the top corner. When off, only the title and its buttons stay.",
 	}),
