@@ -1,0 +1,12 @@
+{
+	"name": "N-body Gravity Simulation",
+	"short_name": "N-body",
+	"description": "Interactive N-body gravity simulation.",
+	"start_url": "./",
+	"scope": "./",
+	"display": "fullscreen",
+	"orientation": "any",
+	"background_color": "#0d0f14",
+	"theme_color": "#0d0f14",
+	"icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

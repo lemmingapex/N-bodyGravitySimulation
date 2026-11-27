@@ -1,24 +1,448 @@
-<html>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width">
-<title>N-body Gravity Simulation</title>
-<head>
-	<link rel="stylesheet" type="text/css" href="main.css"/>
-	<script type="text/javascript" src="planets.js"></script>
-	<script type="text/javascript" src="dat.gui.min.js"></script>
-</head>
-<body>
-	<header>
-		<hgroup id="blurb" class="info">
-			<h1>N-body Gravity Simulation</h1>
-			<h1>Click to add planet. Click and drag to add velocity.</h1>
-			<h1>Ctrl + move to pan camera.</h1>
-			<h1 id="stats"></h1>
-			<h1 id="fps"></h1>
-		</hgroup>
-	</header>
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta
+			name="description"
+			content="Interactive N-body gravity simulation. Launch planets, drop in whole scenarios and collide galaxies on desktop or mobile."
+		/>
+		<meta name="theme-color" content="#0d0f14" />
+		<meta name="color-scheme" content="dark" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'"
+		/>
+		<title>N-body Gravity Simulation</title>
+		<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+		<link rel="manifest" href="manifest.webmanifest" />
+		<link rel="stylesheet" href="src/styles.css" />
+		<link rel="modulepreload" href="vendor/lil-gui/lil-gui.esm.min.js" />
+		<script type="module" src="src/main.js"></script>
+	</head>
+	<body>
+		<main id="stage" class="stage">
+			<canvas
+				id="trails"
+				class="stage__layer"
+				role="img"
+				aria-label="Gravity simulation. Use the toolbar or keyboard shortcuts to interact; press ? for help."
+			></canvas>
+			<canvas id="overlay" class="stage__layer" aria-hidden="true"></canvas>
+		</main>
 
-	<canvas id="can" tabindex="1"></canvas>
-	<canvas id="canbak"></canvas>
-</body>
+		<header id="hud" class="hud">
+			<div class="hud__title-row">
+				<h1 class="hud__title">N-body Gravity</h1>
+				<span class="hud__actions">
+					<button
+						type="button"
+						class="icon-button icon-button--small"
+						data-action="share"
+						aria-label="Copy a link to this simulation"
+						title="Share link (L): copy a link that reopens this simulation as it is now"
+					>
+						<svg
+							class="icon icon--stroke icon--small"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+						>
+							<path
+								d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"
+							/>
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="icon-button icon-button--small"
+						data-action="record"
+						aria-pressed="false"
+						aria-label="Record video"
+						title="Record video / GIF (V): record the view until you press again"
+					>
+						<svg class="icon icon--small" viewBox="0 0 24 24" aria-hidden="true">
+							<circle cx="12" cy="12" r="6" />
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="icon-button icon-button--small"
+						data-action="sound"
+						aria-pressed="true"
+						aria-label="Sound"
+						title="Sound on / off (A)"
+					>
+						<svg
+							class="icon icon--stroke icon--small"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+						>
+							<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+							<path
+								class="icon__sound-on"
+								d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"
+							/>
+							<path class="icon__sound-off" d="M16 9.5l5 5M21 9.5l-5 5" />
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="icon-button icon-button--small"
+						data-action="help"
+						aria-label="Help and controls"
+						title="Help (?): controls and keyboard shortcuts"
+					>
+						?
+					</button>
+				</span>
+			</div>
+			<p id="hint" class="hud__hint"></p>
+			<dl class="hud__stats">
+				<div>
+					<dt><abbr title="Number of bodies in the simulation.">Bodies</abbr></dt>
+					<dd id="stat-bodies">0</dd>
+				</div>
+				<div>
+					<dt>
+						<abbr
+							title="Frames drawn per second, averaged over the last second. Drawing runs separately from the physics: Sim speed shows whether the simulation itself keeps up."
+							>FPS</abbr
+						>
+					</dt>
+					<dd id="stat-fps">–</dd>
+				</div>
+				<div>
+					<dt>
+						<abbr
+							title="Simulated time since the scenario started. At 1× speed it advances 0.2 every real second; orbit periods in the inspector use the same units."
+							>Time</abbr
+						>
+					</dt>
+					<dd id="stat-time">0.0</dd>
+				</div>
+				<div>
+					<dt>
+						<abbr
+							title="How fast simulated time is actually passing, compared with 1× speed. It should match the Speed setting; when the physics can't keep up (too many bodies or substeps), the simulation runs in slow motion and this turns amber."
+							>Sim speed</abbr
+						>
+					</dt>
+					<dd id="stat-speed">–</dd>
+				</div>
+				<div>
+					<dt>
+						<abbr
+							title="Physics steps per real second. ×N: each step is split into N substeps for a close encounter."
+							>Steps/s</abbr
+						>
+					</dt>
+					<dd id="stat-steps">–</dd>
+				</div>
+				<div>
+					<dt>
+						<abbr
+							title="CPU threads doing the physics. Systems of 3,000 or more bodies split gravity, collision detection and the Barnes–Hut tree across them (in use); smaller ones don't need to (ready). 1 means this browser can't share memory between threads here, so everything runs on one."
+							>Threads</abbr
+						>
+					</dt>
+					<dd id="stat-threads">–</dd>
+				</div>
+				<div>
+					<dt>
+						<abbr
+							title="Energy drift: change in total energy since bodies or physics settings last changed, relative to the system's kinetic plus potential energy. Closer to zero is more accurate. Shows – while bodies keep merging."
+							>ΔE</abbr
+						>
+					</dt>
+					<dd id="stat-energy">–</dd>
+				</div>
+			</dl>
+		</header>
+
+		<nav id="toolbar" class="toolbar" aria-label="Simulation controls">
+			<button
+				type="button"
+				class="icon-button"
+				data-action="pause"
+				aria-pressed="false"
+				aria-label="Pause"
+				title="Pause / resume (Space)"
+			>
+				<svg class="icon icon--pause" viewBox="0 0 24 24" aria-hidden="true">
+					<rect x="6" y="5" width="4" height="14" rx="1" />
+					<rect x="14" y="5" width="4" height="14" rx="1" />
+				</svg>
+				<svg class="icon icon--play" viewBox="0 0 24 24" aria-hidden="true">
+					<path
+						d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"
+					/>
+				</svg>
+			</button>
+			<div class="toolbar__group" role="group" aria-label="Tool">
+				<button
+					type="button"
+					class="icon-button"
+					data-tool="planet"
+					aria-pressed="true"
+					aria-label="Add planets"
+					title="Add planets (P): click for a planet in orbit, or pull back and release to launch one"
+				>
+					<svg class="icon icon--stroke" viewBox="0 0 24 24" aria-hidden="true">
+						<circle cx="12" cy="12" r="4.5" />
+						<ellipse cx="12" cy="12" rx="10" ry="3.5" transform="rotate(-20 12 12)" />
+					</svg>
+				</button>
+				<button
+					type="button"
+					class="icon-button"
+					data-tool="scenario"
+					aria-pressed="false"
+					aria-label="Add scenarios"
+					title="Add scenarios (S): click to drop in the scenario chosen next to this button, or pull back and release to send it moving"
+				>
+					<svg class="icon icon--stroke" viewBox="0 0 24 24" aria-hidden="true">
+						<circle cx="12" cy="12" r="2.5" class="icon__fill" />
+						<circle cx="12" cy="12" r="6" stroke-dasharray="2 2.2" />
+						<circle cx="12" cy="12" r="9.5" stroke-dasharray="2 2.6" />
+					</svg>
+				</button>
+				<select
+					id="scenario-picker"
+					class="toolbar__picker"
+					aria-label="Scenario to add"
+					title="Scenario to add"
+				></select>
+				<button
+					type="button"
+					class="icon-button"
+					data-tool="pan"
+					aria-pressed="false"
+					aria-label="Pan and zoom"
+					title="Pan and zoom (M): drag to move around; scroll or pinch to zoom. With any tool, right-drag also pans"
+				>
+					<svg class="icon icon--stroke" viewBox="0 0 24 24" aria-hidden="true">
+						<path
+							d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"
+						/>
+					</svg>
+				</button>
+			</div>
+			<button
+				type="button"
+				class="icon-button"
+				data-action="fit"
+				aria-label="Fit view"
+				title="Fit view (R): zoom and pan so every body is in view"
+			>
+				<svg class="icon icon--stroke" viewBox="0 0 24 24" aria-hidden="true">
+					<path
+						d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"
+					/>
+					<circle cx="12" cy="12" r="2.5" />
+				</svg>
+			</button>
+			<button
+				type="button"
+				class="icon-button"
+				data-action="clear"
+				aria-label="Remove all bodies"
+				title="Remove all bodies (C): start from empty space"
+			>
+				<svg class="icon icon--stroke" viewBox="0 0 24 24" aria-hidden="true">
+					<path
+						d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"
+					/>
+				</svg>
+			</button>
+			<button
+				type="button"
+				class="icon-button"
+				data-action="settings"
+				aria-expanded="false"
+				aria-controls="settings-panel"
+				aria-label="Settings"
+				title="Settings (G): physics, view, sound and more. Hover over a setting to see what it does"
+			>
+				<svg class="icon icon--stroke" viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+					<circle cx="16" cy="6" r="2" />
+					<circle cx="10" cy="12" r="2" />
+					<circle cx="18" cy="18" r="2" />
+				</svg>
+			</button>
+		</nav>
+
+		<button id="rec-indicator" type="button" class="rec" data-action="record" hidden>
+			<span class="rec__dot" aria-hidden="true"></span> REC <span id="rec-time">0:00</span>
+			<span class="rec__hint">· stop</span>
+		</button>
+
+		<section id="inspector" class="inspector" hidden aria-labelledby="inspector-title">
+			<div class="inspector__header">
+				<span id="inspector-swatch" class="inspector__swatch" aria-hidden="true"></span>
+				<h2 id="inspector-title" class="inspector__title">Body</h2>
+				<button
+					id="inspector-close"
+					type="button"
+					class="icon-button icon-button--small"
+					aria-label="Close inspector"
+					title="Close (Esc)"
+				>
+					×
+				</button>
+			</div>
+			<dl id="inspector-fields" class="inspector__fields"></dl>
+			<div class="inspector__actions">
+				<button
+					id="inspector-follow"
+					type="button"
+					class="pill-button"
+					aria-pressed="false"
+					title="Keep the camera centered on this body"
+				>
+					Follow
+				</button>
+				<button
+					id="inspector-delete"
+					type="button"
+					class="pill-button pill-button--danger"
+					title="Delete this body (Delete)"
+				>
+					Delete
+				</button>
+			</div>
+		</section>
+
+		<dialog id="recording" class="help" aria-labelledby="recording-title">
+			<div class="help__body">
+				<h2 id="recording-title">Recording</h2>
+				<video
+					id="recording-video"
+					class="recording__media"
+					controls
+					loop
+					autoplay
+					muted
+					playsinline
+				></video>
+				<img id="recording-gif" class="recording__media" alt="Recorded animation" hidden />
+				<p id="recording-info"></p>
+				<div class="recording__actions">
+					<a id="recording-download-video" class="pill-button" href="#" download
+						>Download video</a
+					>
+					<a id="recording-download-gif" class="pill-button" href="#" download
+						>Download GIF</a
+					>
+					<button id="recording-close" type="button" class="help__close">Close</button>
+				</div>
+			</div>
+		</dialog>
+
+		<dialog id="help" class="help" aria-labelledby="help-title">
+			<div class="help__body">
+				<h2 id="help-title">How to play</h2>
+				<p>
+					Every body attracts every other body by Newton's law of gravitation. Launch
+					planets, drop in whole scenarios, and watch orbits, collisions and slingshots
+					play out.
+				</p>
+
+				<h3>Mouse &amp; trackpad</h3>
+				<ul>
+					<li>
+						<strong>Click</strong>: add a planet (in a circular orbit when
+						<em>Tap = circular orbit</em> is on)
+					</li>
+					<li>
+						<strong>Click, pull back &amp; release</strong>: launch a planet like a
+						slingshot
+					</li>
+					<li>
+						<strong>Scenario tool</strong> (pick one in the toolbar), then click: drop
+						in a copy of that scenario; pull back to launch it
+					</li>
+					<li>
+						<strong>Click a body</strong>: inspect it (mass, speed, orbit) and follow or
+						delete it
+					</li>
+					<li><strong>Wheel / pinch</strong>: zoom around the cursor</li>
+					<li>
+						<strong>Right-drag</strong>, <strong>middle-drag</strong> or
+						<strong>Shift-drag</strong>: pan
+					</li>
+				</ul>
+
+				<h3>Touch</h3>
+				<ul>
+					<li>
+						<strong>Tap</strong>: add a planet ·
+						<strong>pull back &amp; release</strong>: launch it
+					</li>
+					<li><strong>Tap a body</strong>: inspect, follow or delete it</li>
+					<li><strong>Two fingers</strong>: pan and pinch-zoom</li>
+					<li>Use the toolbar to switch between planets, scenarios and pan</li>
+				</ul>
+
+				<h3>Keyboard</h3>
+				<dl class="help__keys">
+					<dt><kbd>A</kbd></dt>
+					<dd>Sound on / off</dd>
+					<dt><kbd>D</kbd></dt>
+					<dd>Randomize settings</dd>
+					<dt><kbd>Space</kbd></dt>
+					<dd>Pause / resume</dd>
+					<dt><kbd>.</kbd> or <kbd>N</kbd></dt>
+					<dd>Step once</dd>
+					<dt><kbd>P</kbd> <kbd>S</kbd> <kbd>M</kbd></dt>
+					<dd>Planet / scenario / pan tool</dd>
+					<dt><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd></dt>
+					<dd>Load a scenario</dd>
+					<dt><kbd>R</kbd></dt>
+					<dd>Fit view</dd>
+					<dt><kbd>F</kbd></dt>
+					<dd>Cycle camera follow</dd>
+					<dt><kbd>+</kbd> <kbd>-</kbd></dt>
+					<dd>Zoom</dd>
+					<dt><kbd>[</kbd> <kbd>]</kbd></dt>
+					<dd>Slower / faster</dd>
+					<dt><kbd>C</kbd></dt>
+					<dd>Remove all bodies</dd>
+					<dt><kbd>G</kbd></dt>
+					<dd>Show / hide settings</dd>
+					<dt><kbd>V</kbd></dt>
+					<dd>Start / stop recording (video and GIF)</dd>
+					<dt><kbd>L</kbd></dt>
+					<dd>Copy a share link</dd>
+					<dt><kbd>Delete</kbd></dt>
+					<dd>Delete the selected body</dd>
+					<dt><kbd>Esc</kbd></dt>
+					<dd>Cancel aiming / deselect</dd>
+				</dl>
+
+				<h3>Under the hood</h3>
+				<p>
+					Choose between Euler, leapfrog (Verlet), Yoshida 4th-order and Runge–Kutta 4
+					integrators, and exact O(n²) gravity or the Barnes–Hut O(n log n) approximation.
+					Adaptive substeps automatically shrink the time step during close encounters.
+					The <abbr>ΔE</abbr> readout shows how well energy is conserved. Physics runs in
+					background threads, using every spare CPU core for big systems, and bodies are
+					drawn with WebGL, so tens of thousands of bodies stay smooth.
+				</p>
+				<p>
+					<a href="https://github.com/lemmingapex/N-bodyGravitySimulation" rel="noopener"
+						>Source on GitHub</a
+					>
+				</p>
+				<button id="help-close" type="button" class="help__close" autofocus>Close</button>
+			</div>
+		</dialog>
+
+		<div id="toast" class="toast" role="status" aria-live="polite"></div>
+		<p id="fatal" class="fatal" role="alert" hidden></p>
+		<noscript><p class="fatal">This simulation needs JavaScript enabled.</p></noscript>
+	</body>
 </html>

@@ -1,0 +1,39 @@
+{
+	"name": "n-body-gravity-simulation",
+	"version": "2.0.0",
+	"private": true,
+	"description": "Interactive 2D N-body gravity simulation that runs in the browser.",
+	"type": "module",
+	"license": "MIT",
+	"author": "Scott Wiedemann",
+	"homepage": "https://lemmingapex.github.io/N-bodyGravitySimulation/",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/lemmingapex/N-bodyGravitySimulation.git"
+	},
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"start": "node scripts/serve.js",
+		"test": "node --test \"test/**/*.test.js\"",
+		"test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" \"test/**/*.test.js\"",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"typecheck": "tsc -p jsconfig.json",
+		"check": "npm run lint && npm run format:check && npm run typecheck && npm test",
+		"vendor": "node scripts/vendor.js",
+		"test:e2e": "node --test --test-concurrency=1 \"test/e2e/*.e2e.js\""
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@types/node": "^26.6.10",
+		"eslint": "^10.15.0",
+		"globals": "^17.14.0",
+		"lil-gui": "^0.21.0",
+		"playwright-core": "^1.65.1",
+		"prettier": "^3.10.1",
+		"typescript": "^7.0.2"
+	}
+}
